@@ -1,0 +1,17 @@
+# PostgreSQL database interaction
+psycopg2-binary==3.2.3
+
+# Data manipulation and Excel
+pandas==2.2.3
+openpyxl==3.1.5
+xlsxwriter==3.2.0  # If you're using this for Excel generation
+
+# Optional: If you're using SQLAlchemy
+SQLAlchemy==2.0.36
+
+# Optional: For scripts involving date utilities
+python-dateutil==2.9.0.post0
+
+# Optional: If you're doing any sort of CLI display formatting
+rich==13.9.4
+

@@ -102,12 +102,13 @@ def enter_leftovers_and_ending_inv():
                 conn.execute(
                     """
                     INSERT INTO salad_bar (
-                        itemid, serve_date, leftovers, ending_inv, time_served
+                        itemid, serve_date, units_received, leftovers, ending_inv, time_served
                     )
-                    VALUES (?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
                         rec["itemid"], serve_date,
+                        rec.get("units_received", 0),  # 👈 fallback to 0 if not present
                         rec["leftovers"], rec["ending_inv"], time_served
                     )
                 )

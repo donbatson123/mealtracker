@@ -7,25 +7,24 @@ from rich.panel import Panel
 from rich.table import Table
 import os
 
+# Constants
 DB_FILE = "mealtracker.db"
-EXPORT_FOLDER = "exports"  # Folder for backups
+EXPORT_FOLDER = "exports"
 os.makedirs(EXPORT_FOLDER, exist_ok=True)
 
 console = Console()
 
 def clear_screen():
-    import os
     os.system("cls" if os.name == "nt" else "clear")
 
-# Fetch items from sorted_items table
 def get_items():
+    """Fetch items from sorted_items table."""
     with sqlite3.connect(DB_FILE) as conn:
         return pd.read_sql_query("SELECT itemid, itemname FROM sorted_items", conn)
 
 def enter_units_rcvd_data():
     df_sorted = get_items()
     serve_date = datetime.now().strftime('%Y-%m-%d')
-
     clear_screen()
 
     console.print(Panel.fit(
@@ -35,12 +34,11 @@ def enter_units_rcvd_data():
     ))
 
     records = []
-    console.print("\n[bold blue]➡️ Enter data for each item[/bold blue] (press Enter to enter 0, or type 'q' to quit):\n")
+    console.print("\n[bold blue]➡️ Enter data for each item[/bold blue] (Enter for 0, or 'q' to quit):\n")
 
     for _, row in df_sorted.iterrows():
         itemid = row['itemid']
         itemname = row['itemname']
-
         console.rule(f"[bold yellow]{itemname}[/bold yellow]")
 
         units_received = Prompt.ask("  Units Received", default="0")
@@ -77,7 +75,6 @@ def enter_units_rcvd_data():
         console.print("\n[red]⚠️ No data to save. Exiting.[/red]")
         return
 
-    # Prompt for time received
     time_rcvd = Prompt.ask("\n⏰ Enter time received (HH:MM)")
     try:
         datetime.strptime(time_rcvd, "%H:%M")
@@ -85,7 +82,7 @@ def enter_units_rcvd_data():
         console.print("[red]❌ Invalid time format. Aborting.[/red]")
         return
 
-    # Preview all entries
+    # Review entries
     table = Table(title="📝 Review Entered Data", box=None, show_lines=True)
     table.add_column("Index", style="dim")
     table.add_column("Item Name")
@@ -102,7 +99,7 @@ def enter_units_rcvd_data():
 
     console.print("\n", table)
 
-    # Option to edit a record
+    # Edit entries if needed
     if Confirm.ask("✏️ Would you like to edit any entries?", default=False):
         while True:
             index_to_edit = Prompt.ask("Enter index to edit (or blank to finish)", default="", show_default=False)
@@ -124,42 +121,63 @@ def enter_units_rcvd_data():
             except (ValueError, IndexError):
                 console.print("[red]❌ Invalid index. Try again.[/red]")
 
-    # Export to CSV or Excel
+    # Export to Excel
     df_export = pd.DataFrame.from_records(records)
     df_export["serve_date"] = serve_date
     df_export["time_rcvd"] = time_rcvd
-
     filename_base = f"{EXPORT_FOLDER}/saladbar_rcvd_{serve_date.replace('-', '')}"
     export_path = f"{filename_base}.xlsx"
     df_export.to_excel(export_path, index=False)
-
     console.print(f"\n📁 [bold]Data exported to:[/bold] [green]{export_path}[/green]")
 
-    # Confirm before saving
     if not Confirm.ask("💾 Save to database now?", default=True):
         console.print("[yellow]⚠️ Data was not saved to database.[/yellow]")
         return
 
-    # Insert data into database
+    # Insert or update database records
     with sqlite3.connect(DB_FILE) as conn:
         for rec in records:
-            conn.execute(
-                """
-                INSERT INTO salad_bar (
-                    itemid, serve_date, time_rcvd, temp_rcvd,
-                    units_received, culled, ending_inv, leftovers,
-                    current_inv, units_used, portions_prepared, total_served,
-                    time_served, temp_served, synced
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    rec['itemid'], serve_date, time_rcvd, rec['temp_rcvd'],
-                    rec['units_received'], 0, 0, 0,
-                    0, 0, 0, 0,
-                    "", 0.0, 0
-                )
+            cursor = conn.execute(
+                "SELECT 1 FROM salad_bar WHERE itemid = ? AND serve_date = ?",
+                (rec['itemid'], serve_date)
             )
+            exists = cursor.fetchone()
+
+            if exists:
+                conn.execute(
+                    """
+                    UPDATE salad_bar
+                    SET time_rcvd = ?, temp_rcvd = ?, units_received = ?
+                    WHERE itemid = ? AND serve_date = ?
+                    """,
+                    (
+                        time_rcvd,
+                        rec['temp_rcvd'],
+                        rec['units_received'],
+                        rec['itemid'],
+                        serve_date
+                    )
+                )
+                console.print(f"[yellow]🔄 Updated:[/yellow] {rec['itemname']}")
+            else:
+                conn.execute(
+                    """
+                    INSERT INTO salad_bar (
+                        itemid, serve_date, time_rcvd, temp_rcvd,
+                        units_received, culled, ending_inv, leftovers,
+                        current_inv, units_used, portions_prepared, total_served,
+                        time_served, temp_served, synced
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        rec['itemid'], serve_date, time_rcvd, rec['temp_rcvd'],
+                        rec['units_received'], 0, 0, 0,
+                        0, 0, 0, 0,
+                        "", 0.0, 0
+                    )
+                )
+                console.print(f"[green]➕ Inserted:[/green] {rec['itemname']}")
 
     console.print(f"\n[bold green]✅ {len(records)} salad bar records inserted successfully.[/bold green]")
 

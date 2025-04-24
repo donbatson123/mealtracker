@@ -14,9 +14,9 @@ def sync_meals_orders(dry_run=False):
     # PostgreSQL connection details
     pg_db_params = {
         'dbname': 'your_database',
-        'user': 'user_name',
-        'password': 'secure_password',
-        'host': 'your_host',
+        'user': 'username',
+        'password': 'your_password',
+        'host': 'localhost',
         'port': 5432
     }
 
@@ -40,7 +40,7 @@ def sync_meals_orders(dry_run=False):
                 df.replace({"": None, "NaN": None}, inplace=True)
                 if "time" in df.columns:
                     df["time"] = df["time"].apply(lambda x: x if x and str(x).strip() not in ("", "NaN") else None)
-                
+                print(df)
                 return df
         except Exception as e:
             console.print(f"[red]❌ Failed to fetch from {table}: {e}[/red]")
@@ -91,5 +91,7 @@ def sync_meals_orders(dry_run=False):
 
     console.print("\n[bold green]🎉 Sync complete![/bold green]")
 
+
 # Run the function
-sync_meals_orders(dry_run=False)
+if __name__ == "__main__":
+    sync_meals_orders(dry_run=False)

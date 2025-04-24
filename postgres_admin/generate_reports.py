@@ -8,9 +8,9 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 DB_CONFIG = {
     "dbname": "your_database",
-    "user": "user_name",
-    "password": "secure_password",
-    "host": "your_host",
+    "user": "username",
+    "password": "password",
+    "host": "localhost",
     "port": "5432"
 }
 

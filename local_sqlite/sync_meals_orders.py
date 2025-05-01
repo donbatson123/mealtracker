@@ -7,17 +7,22 @@ def sync_meals_orders(dry_run=False):
     from rich.console import Console
     from rich.table import Table
     from rich.panel import Panel
+    from dotenv import load_dotenv
+    import os
+
+    # Load .env from the current directory
+    load_dotenv()
 
     console = Console()
     sqlite_db_path = 'mealtracker.db'
 
     # PostgreSQL connection details
-    pg_db_params = {
-        'dbname': 'your_database',
-        'user': 'username',
-        'password': 'your_password',
-        'host': 'localhost',
-        'port': 5432
+    pg_db_params  = {
+    "host": os.getenv("PG_HOST"),
+    "port": int(os.getenv("PG_PORT", 5432)),
+    "dbname": os.getenv("PG_DBNAME"),
+    "user": os.getenv("PG_USER"),
+    "password": os.getenv("PG_PASSWORD")
     }
 
     # Tables to sync and which columns to exclude from sync
